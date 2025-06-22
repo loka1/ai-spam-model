@@ -501,7 +501,7 @@ print(f'F1-score   {f1_score(dfpred.true, dfpred.pred)*100:.2f}%')
 
 def get_predictions(text):
     sequence = tokenizer.texts_to_sequences([text])
-    # pad the sequence
+    # pad the sequencehf_kqNELMRPmaxExFpuKVlwKJMAtlcopESnJd
     sequence = pad_sequences(sequence, maxlen=SEQUENCE_LENGTH)
     # get the prediction
     prediction = bimodel.predict(sequence)
@@ -665,6 +665,7 @@ from huggingface_hub import create_repo
 create_repo("spam-emails-classifier", private=False)
 
 bimodel.save("model.h5")
+bimodel.save("model.keras")
 
 import pickle
 
@@ -689,8 +690,26 @@ def predict_spam(text):
 
 print(predict_spam("You have won a free iPhone"))
 
+from tensorflow.keras.models import load_model
+
+# Load model
+model = load_model("model.keras")
+
+# Load tokenizer
+with open("tokenizer.pkl", "rb") as f:
+    tokenizer = pickle.load(f)
+
+# Test a prediction
+def predict_spam(text):
+    seq = tokenizer.texts_to_sequences([text])
+    padded = pad_sequences(seq, maxlen=10)
+    pred = model.predict(padded)[0][0]
+    return "Spam" if pred > 0.5 else "Not Spam"
+
+print(predict_spam("You have won a free iPhone"))
+
 !mkdir lstm-model
-!cp model.h5 tokenizer.pkl lstm-model/
+!cp model.h5 model.keras tokenizer.pkl lstm-model/
 
 
 
@@ -718,8 +737,8 @@ print(predict_spam("You have won a free iPhone"))
 # text = "Hi man, I was wondering if we can meet tomorrow."
 # print(get_predictions(text))
 
-with open("lstm-model/README.md", "w") as f:
-    f.write("# LSTM Spam Detector\nThis is a simple LSTM model to detect spam messages.")
+# with open("lstm-model/README.md", "w") as f:
+    # f.write("# LSTM Spam Detector\nThis is a simple LSTM model to detect spam messages.")
 
 from huggingface_hub import upload_file
 
@@ -727,6 +746,12 @@ from huggingface_hub import upload_file
 upload_file(
     path_or_fileobj="lstm-model/model.h5",
     path_in_repo="model.h5",
+    repo_id="lokas/spam-emails-classifier",
+    repo_type="model"
+)
+upload_file(
+    path_or_fileobj="lstm-model/model.keras",
+    path_in_repo="model.keras",
     repo_id="lokas/spam-emails-classifier",
     repo_type="model"
 )
@@ -738,12 +763,12 @@ upload_file(
     repo_id="lokas/spam-emails-classifier",
     repo_type="model"
 )
-upload_file(
-    path_or_fileobj="lstm-model/README.md",
-    path_in_repo="README.md",
-    repo_id="lokas/spam-emails-classifier",
-    repo_type="model"
-)
+# upload_file(
+#     path_or_fileobj="lstm-model/README.md",
+#     path_in_repo="README.md",
+#     repo_id="lokas/spam-emails-classifier",
+#     repo_type="model"
+# )
 
 from huggingface_hub import upload_folder
 
@@ -786,4 +811,30 @@ def predict_spam(text):
     return "🚫 Spam" if pred > 0.5 else "✅ Not Spam"
 
 print(predict_spam("Win a free iPhone now!"))
+
+from tensorflow.keras.models import load_model
+from huggingface_hub import hf_hub_download
+import pickle
+
+# Download files from Hugging Face Hub
+model_path = hf_hub_download("lokas/spam-emails-classifier", "model.keras")
+tokenizer_path = hf_hub_download("lokas/spam-emails-classifier", "tokenizer.pkl")
+
+# Load model and tokenizer
+model = load_model(model_path)
+with open(tokenizer_path, "rb") as f:
+    tokenizer = pickle.load(f)
+
+# Predict a sample message
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+
+def predict_spam(text):
+    seq = tokenizer.texts_to_sequences([text])
+    padded = pad_sequences(seq, maxlen=10)
+    pred = model.predict(padded)[0][0]
+    return "🚫 Spam" if pred > 0.5 else "✅ Not Spam"
+
+print(predict_spam("Win a free iPhone now!"))
+
+!zip -r /content/app/images_backup.zip /content/app/images
 
